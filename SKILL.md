@@ -1,102 +1,153 @@
-# 16 metod Zapasu Bezpieczeństwa — wzory, progi, interpretacja
+---
+name: zb
+description: Kompleksowa metodologia Zapasu Bezpieczeństwa (ZB) 2.0 — audyt i budowa kalkulatorów Excel dla portfeli do 500+ SKU, 16 metod ZB (King, DDMRP, Croston/SBA, Fill Rate/ESC, kwantyl empiryczny, King z σ_err), automatyczne drzewo wyboru metody, ROP/S-level, korekta fill rate dostawcy (LT_eff), profile dostawców Turcja/Chiny/Europa. Użyj ZAWSZE gdy użytkownik pyta o zapas bezpieczeństwa, safety stock, ZB, ROP, punkt zamawiania, DDMRP, Croston, SBA, popyt przerywany, King's Formula, fill rate, LT_eff, poziom obsługi CSL, klasyfikację ABC/XYZ dla zapasów — a także gdy przesyła plik Excel z obliczeniami zapasów do sprawdzenia ("przeanalizuj plik", "oceń metodę", "spójrz okiem profesora logistyki"), chce zbudować kalkulator ZB dla wielu produktów, pyta "ile trzymać na magazynie" / "kiedy zamawiać", lub ma dostawców z długim czasem dostawy.
+---
 
-Spis: [Notacja](#notacja) | [M1–M2 proste](#m1m2) | [M3–M5 normalne](#m3m5) |
-[M6–M8 odporne](#m6m8) | [M9–M11 specjalne](#m9m11) | [M12–M13 przerywane](#m12m13) |
-[M14–M16 zaawansowane](#m14m16) | [Progi decyzyjne](#progi) | [G(z)](#gz) | [Bibliografia](#biblio)
+# Zapas Bezpieczeństwa (ZB) 2.0 — audyt i budowa kalkulatorów
 
-## Notacja {#notacja}
-D̄ — średni popyt/tydz (z pełnej historii, z zerami); σ_D — odch. std popytu/tydz;
-ẑ — śr. wielkość sprzedaży w tygodniach niezerowych; p̂ = liczba_tygodni / n_nz;
-CV²_nz = (σ_nz/ẑ)² z tygodni NIEZEROWYCH; LT — czas dostawy [dni]; σ_LT [dni];
-FR — fill rate dostawcy; LT_eff = LT/(7·FR) [tyg]; σ_LTw = σ_LT/7 [tyg];
-z — kwantyl normalny dla CSL (NORMSINV); T — okres przeglądu [dni].
-σ_LTD = √(LT_eff·σ_D² + D̄²·σ_LTw²) — odch. popytu w czasie dostawy.
+Następca metodologii `zb` 1.x. Wypracowany na realnym projekcie: portfel 907 SKU,
+dostawcy z Turcji/Chin/Europy, plik Excel z 56 tys. formuł, sześć iteracji recenzji
+profesorskiej. Zawiera nie tylko wzory, ale i katalog błędów, które NAPRAWDĘ
+wystąpiły — sprawdzaj je w każdym cudzym pliku.
 
-## M1–M2: proste (klasa C) {#m1m2}
-**M1 Heurystyczna**: ZB = stała (doświadczenie). Tylko C; zero podstaw statystycznych.
-**M2 % popytu**: ZB = D̄ × LT_eff × PCT (A:30%, B:20%, C:10–20%). Nie uwzględnia zmienności.
+## Filozofia
 
-## M3–M5: rodzina normalna (popyt regularny!) {#m3m5}
-**M3 zmienny popyt, LT stały**: ZB = z·σ_D·√LT_eff. Niedoszacowuje gdy σ_LT>0.
-**M4 popyt stały, LT zmienny**: ZB = z·D̄·σ_LTw. Tylko CV<0,1.
-**M5 King's Formula ★**: ZB = z·√(LT_eff·σ_D² + D̄²·σ_LTw²) = z·σ_LTD.
-Złoty standard dla AX/AY/BX/BY. Excel:
-`=ROUND(Z*SQRT(LT_eff*σD^2+D^2*σLTw^2),0)`.
-Diagnoza składników: A=LT_eff·σ_D² (popyt), B=D̄²·σ_LTw² (dostawca); B/(A+B)>70%
-→ rozmawiaj z dostawcą, nie z prognostą. Klasyczna wersja pomija składnik
-interakcji σ_D²·σ_LTw² (niedoszacowanie 3–10% — dopuszczalne, odnotuj).
+ZB chroni przed dwoma niepewnościami naraz: zmiennością popytu i zmiennością
+czasu dostawy (LT). Zanim policzysz wzór — zrozum dane. Trzy pytania otwierające:
+1. Ile tygodni niezerowych ma historia? (n_nz < 3 → żadna statystyka nie jest uczciwa)
+2. Kto generuje ryzyko: popyt czy dostawca? (porównaj składniki LT×σ_D² vs D̄²×σ_LT²)
+3. Czy ZB kosztuje mniej niż 30% wartości rocznej SKU? (jeśli nie — problem jest
+   biznesowy: VMI/konsygnacja/eliminacja, nie wzór)
 
-## M6–M8: odporne / liczydłowe {#m6m8}
-**M6 Max-Avg**: ZB = D_max·LT_max/7 − D̄·LT/7. Bez podstaw stat., zwykle mocno
-przeszacowuje — tylko jako kolumna ostrzegawcza, nie do autoselekcji.
-**M7 MAD**: ZB = z·1,25·MAD·√LT_eff. Odporna na outliery (1,25=σ/MAD dla normalnego).
-**M8 Poisson**: λ = D̄·LT_eff. λ≥5: ZB = z·√λ. λ<5: ZB = CRITBINOM(100000; λ/100000; CSL) − λ.
-UWAGA: POISSON.INV nie istnieje w Excelu (także 365) — tylko CRITBINOM/BINOM.INV.
-Warunek sensowności: popyt JEDNOSTKOWY (ẑ ≤ 2 szt). Przy partiach ẑ≈20 Poisson
-drastycznie zaniża.
+## Tryby pracy — rozpoznaj, który dotyczy użytkownika
 
-## M9–M11: specjalne {#m9m11}
-**M9 Square Root Law**: ZB_new = ZB_base·√(N_after/N_before). Metoda PORTFELOWA
-(konsolidacja magazynów) — bez sensu per-SKU.
-**M10 Newsvendor**: ZB = NORMSINV(CR)·σ_D·√LT_eff, CR = C_short/(C_short+C_hold).
-JEDNOOKRESOWY (sezon, promo, kolekcja) — nie do SKU odnawialnych.
-**M11 DDMRP Red Zone**: ZB = D̄·(LT/7)·LTF·(1+VF). Nominalny DLT (celowo bez LT_eff
-— zawodność dostawcy → VF, wg Ptak-Smith). Pełny bufor = Green(max(D̄·T; D̄·DLT·LTF))
-+ Yellow(D̄·DLT) + Red; TOR=Red, ROP=TOY. To POLITYKA sterowania, nie wzór —
-w tabeli tylko jako porównanie + flaga "kandydat DDMRP" (LT>30 dni, AX/AY).
-Kalibracja odwrotna do ZB statystycznego: LTF = min(1, max(0,2; 0,5·(1+σ_LT/LT))),
-VF = ZB/(D̄·LT/7)/LTF − 1 ograniczone [0;2]. VF na limicie 2 = SKU poza profilem DDMRP.
+**A. AUDYT istniejącego pliku** — użytkownik przesyła Excel z obliczeniami ZB.
+**B. BUDOWA kalkulatora** — użytkownik ma dane (historia tygodniowa + parametry
+dostawców) i chce narzędzie dla portfela.
+**C. POJEDYNCZY SKU / pytanie metodyczne** — szybka analiza lub wybór metody.
 
-## M12–M13: popyt przerywany (p̂ > 1,32 tyg) {#m12m13}
-**M12 Croston**: prognoza = ẑ/p̂; ZB = z·√(LT_eff/p̂ · 2·ẑ²). ROP = (ẑ/p̂)·LT_eff + ZB.
-**M13 SBA (Syntetos-Boylan)**: prognoza = (1−α/2)·ẑ/p̂ (α≈0,1); ZB jak Croston;
-ROP ze skorygowaną stopą. Wybór: CV²_nz > 0,49 → SBA; ≤ 0,49 → Croston.
-KRYTYCZNE: kryterium na CV²_nz z WIELKOŚCI niezerowych — nie na literze XYZ,
-nie na CV z zerami. Wzór ZB to heurystyka (√(2ẑ²·LT/p̂) bez oparcia w literaturze)
-— dla klasy Z preferuj M15, gdy brama pozwala.
+We wszystkich trybach: jednostki! Ustal na starcie, czy popyt jest dzienny czy
+tygodniowy i czy LT jest w dniach czy tygodniach. Mieszanie poziomów czasu to
+najczęstsze źródło ZB zawyżonego/zaniżonego o rząd wielkości. Konwencja: historia
+i σ_D tygodniowo, LT w dniach → w formułach LT/7.
 
-## M14–M16: zaawansowane {#m14m16}
-**M14 Fill Rate / ESC**: cel = P2 (fill rate), nie CSL. ESC = (1−FR_cel)·Q,
-Q = D̄·T/7. G_req = ESC/σ_LTD; z z odwróconej funkcji straty (tablica G(z));
-ZB = z·σ_LTD. Przy dużych Q często NIŻSZE niż CSL 97% — realna oszczędność
-kapitału dla klasy A. FR_cel per klasa (A 99%, B 97%, C 95%) + nadpisanie per SKU.
-**M15 Kwantyl empiryczny (Willemain)**: okno w = round(LT_eff) tyg (cap: połowa
-historii); sumy kroczące popytu w oknie; ZB = kwantyl_CSL(sumy) − w·D̄, min 0.
-Nieparametryczny — najlepszy dla klasy Z. Brama: n_nz ≥ 8 i LT_eff ≤ 13 tyg
-(przy 26 tyg historii). Wartości statyczne — przeliczaj przy nowej historii.
-**M16 King z σ_err**: M5 z σ_D→σ_err (RMSE błędu prognozy). Teoretycznie poprawne
-wejście: ZB chroni przed BŁĘDEM PROGNOZY, nie surową zmiennością. Dla sezonowych
-usuwa systematyczne zawyżenie. W AUTO: segmenty AX/AY/BX/BY, σ_err>0,
-σ_err/σ_D ≤ 0,8 (prognoza musi realnie tłumaczyć ≥20% zmienności). Z prognozą
-naiwną MA-4 rzadko się aktywuje — nabiera mocy po podpięciu RMSE z ERP/APS.
+## Tryb A — Audyt: obowiązkowa checklista
 
-## Progi decyzyjne — tabela zbiorcza {#progi}
-| Próg | Wartość | Rola |
-|---|---|---|
-| p̂ | > 1,32 tyg | popyt przerywany → M12/M13/M15/M8 |
-| CV²_nz | > 0,49 | SBA zamiast Crostona (Syntetos-Boylan 2005) |
-| n_nz | < 3 | MANUAL/MTO — statystyka zabroniona |
-| n_nz | ≥ 8 | brama wiarygodności M15 |
-| λ=D̄·LT_eff | < 5 i ẑ≤2 | Poisson dokładny (CRITBINOM) |
-| σ_err/σ_D | ≤ 0,8 | M16 zamiast M5 |
-| XYZ | CV_nz ≤0,5 / ≤1,0 / >1,0 | X / Y / Z |
-| ABC | 80% / 95% wartości | A / B / C (Pareto) |
-| pokrycie | 2–20 tyg | poza → alert |
-| kapitał | >30% / 20–30% wart. rocznej | alert 🔴 / 🟡 |
-| FR vs benchmark kraju | >10 p.p. | weryfikacja danych |
-| DDMRP kandydat | LT>30 dni, AX/AY | flaga informacyjna |
+Wczytaj plik programowo (openpyxl, data_only=False ORAZ data_only=True — formuły
+i wartości osobno). Sprawdź KAŻDY punkt — to realne błędy z praktyki:
 
-## Funkcja straty G(z) dla M14 {#gz}
-G(z) = φ(z) − z·(1−Φ(z)). Excel (legacy, przenośne):
-`=EXP(-(A2^2)/2)/SQRT(2*PI())-A2*(1-NORMSDIST(A2))`
-UWAGA na unarny minus: `-(A2^2)`, nigdy `-A2^2`! Tablica z=0,00…4,00 co 0,01;
-odwrócenie: `INDEX(z; MATCH(G_req; kolumna_G; -1))` (kolumna malejąca).
-G_req > G(0)=0,3989 → z<0 → ZB=0 (IFERROR).
+1. **Porównanie tekstu z liczbą w IF** — np. `IF(T3>1.32,...)` gdzie T3 to litera
+   klasy XYZ. W Excelu tekst > liczba jest zawsze PRAWDĄ → warunek martwy.
+   Objaw: jedna gałąź nigdy nie występuje w wynikach (np. 685×SBA, 0×Croston).
+2. **Nieistniejące funkcje** — `_xludf.*` (artefakt generatorów), POISSON.INV
+   (nie istnieje w żadnym Excelu, także 365 — używaj CRITBINOM/BINOM.INV).
+   IFERROR maskuje takie błędy do 0 — po cichu!
+3. **Unarny minus przed potęgą** — `EXP(-A1^2/2)` liczy EXP(+A1²/2), bo w Excelu
+   `-A1^2 = (-A1)²`. Zawsze pisz `EXP(-(A1^2)/2)`.
+4. **CV liczony z tygodniami zerowymi** — zawyża zmienność, wpycha wszystko do
+   klasy Z. Klasyfikacja XYZ i kryterium Syntetos-Boylan: CV²_nz TYLKO z okresów
+   niezerowych. σ_D do wzorów ZB: z pełnej historii (to poprawne).
+5. **Niespójna korekta fill rate** — albo wszędzie LT_eff = LT/FR (podejście A,
+   zalecane), albo nigdzie; ZB/FR (podejście B) nie może współistnieć z A.
+   ROP też musi używać LT_eff, inaczej pipeline niedoszacowany dla słabych dostawców.
+6. **ISBLANK na kolumnie z formułą** — formuła zwracająca 0/"" nigdy nie jest
+   "blank". Bramy warunkowe buduj na wartościach (n_nz ≥ 8), nie na ISBLANK.
+7. **Błąd propagacji w AND** — `AND(ISNUMBER(X), ABS(N-X)>0.1)` wybucha #VALUE!
+   gdy X="" — Excel NIE skraca obliczeń w AND. Używaj zagnieżdżonych IF.
+8. **Filtr-zombie** — autofiltr z zapisanym kryterium + wiersze ukryte na poziomie
+   wiersza; usunięcie filtra NIE odkrywa wierszy. Napraw: wyczyść filterColumn
+   w XML/openpyxl i ustaw row_dimensions.hidden=False.
+9. **Dane wejściowe-defaulty** — σ_LT=0 przy LT>30 dni, identyczne FR dla całego
+   portfela, LT>180 dni — wyglądają na niewypełnione pola, nie pomiary. Flaguj.
+10. **Newsvendor/DDMRP w złej roli** — Newsvendor tylko jednookresowo (sezon/promo);
+    DDMRP to polityka sterowania (bufory, ADU), nie kolejny wzór na ZB — nigdy
+    w autoselekcji, zawsze jako flaga "kandydat" do decyzji eksperta.
 
-## Bibliografia {#biblio}
-Silver, Pyke & Peterson (1998) Inventory Management…, Wiley — M5, M14 (rozdz. 7);
-Croston (1972) Oper. Res. Q. — M12; Syntetos & Boylan (2005) IJF — M13 i CV² 0,49;
-Willemain, Smart & Schwarz (2004) IJF 20(3) — M15; Ptak & Smith (2016) DDMRP — M11;
-Arrow, Harris & Marschak (1951) Econometrica — M10; Maister (1976) — M9;
-Axsäter (2006) Inventory Control — M8; Hopp & Spearman (2001) Factory Physics — CSL vs FR;
-Hadley & Whitin (1963) — Periodic Review; APICS CPIM (2022) — definicje.
+Wynik audytu podawaj jak recenzent: błędy krytyczne / niespójności metodyczne /
+jakość danych / mocne strony — z liczbami (ile SKU dotkniętych, wpływ na kapitał).
+
+## Drzewo wyboru metody (AUTO) — serce metodologii
+
+Kolejność sprawdzeń jest istotna (od dyskwalifikujących do domyślnych):
+
+```
+1. n_nz < 3                        → MANUAL/MTO (żadna statystyka; krytyczne: ZB≈1 partia ẑ,
+                                     niekrytyczne: ZB=0, MTO/VMI)
+2. p̂ > 1,32 tyg (przerywany):
+   a. λ = D̄×LT_eff < 5 ORAZ ẑ ≤ 2  → M8 Poisson (popyt jednostkowy!)
+   b. klasa Z, n_nz ≥ 8, LT_eff ≤ 13 tyg → M15 kwantyl empiryczny
+   c. CV²_nz > 0,49                → M13 SBA
+   d. inaczej                      → M12 Croston
+   (M3/M4/M5/M7/M10/M11 ZABRONIONE dla przerywanego)
+3. regularny, klasa C:
+   a. wartość ZB > 30% wartości rocznej → MTO/VMI (koszt)
+   b. inaczej                      → M2 (20% popytu w LT_eff)
+4. regularny, segment AX/AY/BX/BY:
+   a. σ_err dostępne i σ_err/σ_D ≤ 0,8 → M16 King z σ_err (prognoza tłumaczy strukturę)
+   b. inaczej                      → M5 King's Formula z LT_eff
+```
+
+Progi i uzasadnienia każdej gałęzi + wzory wszystkich 16 metod:
+**czytaj `references/metody_zb_16.md`**.
+
+Kolumnę AUTO stawiaj OBOK ręcznego wyboru użytkownika, nie zamiast — z alertem,
+gdy różnica ZB przekracza 20%. Automat proponuje, człowiek decyduje.
+
+## Alerty jakości (zawsze przy portfelu)
+
+- 🔴 n_nz < 3 → decyzja manualna
+- ⚠️ metoda normalna przy popycie przerywanym
+- ⚠️ M15 przycięty (LT_eff > 13 tyg przy 26 tyg historii)
+- 🟡 pokrycie ZB poza 2–20 tygodni
+- 🔴 kapitał: wartość ZB > 30% wartości rocznej → VMI/konsygnacja/eliminacja;
+  🟡 20–30% → obniż SL / prostsza metoda / MTO
+- ℹ️ kandydat DDMRP (LT > 30 dni, segment AX/AY)
+- ℹ️ FR odbiega od benchmarku kraju > 10 p.p.
+- Δ ZB_auto vs wybrane > 20% → przegląd
+
+## Tryb B — Budowa kalkulatora
+
+Strukturę arkuszy, układ kolumn A–BE, pasma sekcji, grupowanie, ochronę
+i wszystkie pułapki techniczne openpyxl: **czytaj `references/struktura_v36.md`**.
+
+Zasady nienegocjowalne:
+- Żywe formuły Excel, nie wartości z Pythona (wyjątki: kwantyl empiryczny M15
+  i σ_err — oznacz jako STATYCZNE z instrukcją przeliczenia).
+- Po każdym zapisie: przelicz przez LibreOffice (skrypt recalc) i wymagaj
+  **0 błędów formuł**. Ustaw fullCalcOnLoad=True.
+- Waliduj liczbowo: przelicz ręcznie w Pythonie King's dla 2–3 SKU i porównaj
+  co do sztuki; sprawdź rozkład metod AUTO i ogony pokrycia.
+- Ochrona arkuszy bez hasła: edytowalne tylko komórki wejściowe; filtrowanie,
+  sortowanie i formatowanie dozwolone.
+- Wersjonuj plik (v3.x) i prowadź arkusz CHANGELOG — także z listą rzeczy
+  świadomie NIEwdrożonych i dlaczego.
+
+## Tryb C — pojedynczy SKU
+
+Workflow jak w zb 1.x: analiza historii (CV z niezerowych!), wybór σ_LT
+(PERT gdy tylko min/avg/max; MAD gdy ≥10 obserwacji), metoda z drzewa AUTO,
+korekta FR przez LT_eff, ROP = D̄×(LT_eff+T_review)+ZB, walidacja z historią
+(czy ZB bywał przekraczany; +20–30% marginesu ponad obserwowane maksimum).
+
+## Zasady recenzji profesorskiej (gdy oceniasz decyzje)
+
+- Poprawność proceduralna ≠ poprawność merytoryczna: reguły mogły zadziałać,
+  a wynik i tak jest szumem (n_nz=1: p̂ to cenzura, nie pomiar; CV²=0 to artefakt).
+- Przy popycie grudkowym (partie ~stała wielkość co kilka tygodni) sensowna
+  polityka to "trzymaj ≈1 partię + odnawiaj" — sprawdź, czy to nie cykliczne
+  zamówienie jednego klienta → wtedy awizacja/MTO zamiast zapasu.
+- DDMRP vs King: DDMRP celowo używa nominalnego DLT (zawodność dostawcy →
+  Var_Factor, wg Ptak-Smith), King jawnie wycenia σ_LT i FR oraz gwarantuje
+  mierzalny CSL. Porównania liczbowe traktuj jako sanity-check (±15%), nie test.
+- KPI: dla A/B regularnych MAPE/Bias/RMSE; dla klasy Z — fill rate i kapitał,
+  nie dokładność prognozy. KPI liczone z prognozy naiwnej oznaczaj jako
+  PRZYKŁADOWE — do podmiany na błędy prognozy z ERP.
+- 26 tygodni historii = założenie quasi-stacjonarności; sezonowość wymaga ≥104.
+
+## Pliki referencyjne
+
+- `references/metody_zb_16.md` — wzory M1–M16 (Excel + interpretacja), progi
+  decyzyjne, tablica G(z), bibliografia. Czytaj przy obliczeniach i audycie wzorów.
+- `references/struktura_v36.md` — wzorcowa struktura pliku (13 arkuszy, kolumny
+  A–BE), ustawienia ochrony, pułapki openpyxl/LibreOffice. Czytaj przy budowie
+  lub naprawie pliku.
