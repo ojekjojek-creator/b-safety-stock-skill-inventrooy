@@ -1,69 +1,72 @@
-# Zapas Bezpieczeństwa 2.0 — audyt i budowa kalkulatorów Excel
+# Safety Stock 2.0 — Excel calculator audit & build toolkit
 
 ![License](https://img.shields.io/github/license/ojekjojek-creator/safety-stock-toolkit)
 ![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757?logo=anthropic&logoColor=white)
 ![Domain](https://img.shields.io/badge/Domain-Supply%20Chain-blue)
 
-## Co to jest
+## What it is
 
-Skill Claude AI (i metodologia do ręcznego użycia w Excelu) do liczenia i **audytowania**
-zapasu bezpieczeństwa (ZB) dla portfeli SKU. Zawiera 16 metod ZB (King, DDMRP,
-Croston/SBA, Fill Rate/ESC, kwantyl empiryczny, King z σ_err), automatyczne drzewo
-wyboru metody per SKU oraz katalog **prawdziwych błędów formuł Excela**, które
-wystąpiły w praktyce (np. porównanie tekstu z liczbą w `IF`, nieistniejące funkcje
-typu `POISSON.INV`, błędny unarny minus w `EXP(-A1^2/2)`).
+A Claude AI skill (and a methodology for manual use in Excel) for calculating and
+**auditing** safety stock (SS) across SKU portfolios. It includes 16 safety stock
+methods (King, DDMRP, Croston/SBA, Fill Rate/ESC, empirical quantile, King with
+σ_err correction), an automatic per-SKU method-selection decision tree, and a
+catalog of **real-world Excel formula errors** encountered in practice (e.g.
+comparing text to a number inside `IF`, non-existent functions like
+`POISSON.INV`, or an incorrect unary minus in `EXP(-A1^2/2)`).
 
-## Dlaczego to działa lepiej
+## Why it works better
 
-Zbudowane i zwalidowane na realnym projekcie: **907 SKU**, dostawcy z Turcji/Chin/Europy,
-plik Excel z ~56 tys. formuł, sześć iteracji recenzji eksperckiej.
+Built and validated on a real-world project: **907 SKUs**, suppliers across
+Turkey/China/Europe, an Excel file with ~56,000 formulas, six rounds of expert
+review.
 
-| Miara | Bez skilla | Ze skillem |
+| Metric | Without the skill | With the skill |
 |---|---|---|
-| Poprawność audytu formuł ZB | 51% | **100%** |
+| Safety stock formula audit accuracy | 51% | **100%** |
 
-## Dla kogo
+## Who it's for
 
-- Kierowników logistyki i zakupów budujących własne kalkulatory ZB/ROP w Excelu
-- Osób sprawdzających cudzy plik Excel z obliczeniami zapasów ("czy te formuły są poprawne?")
-- Użytkowników Claude/Claude Code chcących dodać domenową wiedzę supply chain jako skill
+- Logistics and procurement managers building their own SS/ROP calculators in Excel
+- Anyone reviewing someone else's Excel inventory calculations ("are these formulas correct?")
+- Claude/Claude Code users who want to add supply chain domain knowledge as a skill
 
-## Jak używać
+## How to use it
 
-### Jako skill Claude
+### As a Claude skill
 ```
-1. Sklonuj repozytorium lub skopiuj katalog do ~/.claude/skills/
-2. Zapytaj Claude: "przeanalizuj ten plik Excel z obliczeniami zapasu bezpieczeństwa"
-   albo "zbuduj kalkulator ZB dla mojego portfela SKU"
-3. Skill automatycznie rozpozna tryb: AUDYT / BUDOWA / POJEDYNCZY SKU
+1. Clone this repository or copy the folder into ~/.claude/skills/
+2. Ask Claude: "audit this Excel file with safety stock calculations"
+   or "build a safety stock calculator for my SKU portfolio"
+3. The skill automatically detects the mode: AUDIT / BUILD / SINGLE SKU
 ```
 
-### Jako metodologia (bez AI)
-Pliki w `references/` (`metody_zb_16.md`, `struktura_v36.md`) opisują wzory i strukturę
-kalkulatora — można je stosować bezpośrednio jako checklistę przy budowie własnego
-arkusza Excel.
+### As a standalone methodology (no AI)
+The files in `references/` (`metody_zb_16.md`, `struktura_v36.md`) describe the
+formulas and calculator structure — they can be used directly as a checklist when
+building your own Excel spreadsheet.
 
-## Struktura repozytorium
+## Repository structure
 
 ```
-├── SKILL.md              # definicja skilla (frontmatter + metodologia)
+├── SKILL.md              # skill definition (frontmatter + methodology)
 ├── references/
-│   ├── metody_zb_16.md   # 16 metod obliczania zapasu bezpieczeństwa
-│   └── struktura_v36.md  # struktura kalkulatora Excel
+│   ├── metody_zb_16.md   # 16 safety stock calculation methods
+│   └── struktura_v36.md  # Excel calculator structure
 ├── LICENSE               # MIT
 └── README.md
 ```
 
-## Metody objęte skillem
+## Methods covered
 
-King's Formula, DDMRP, Croston/SBA (popyt przerywany), Fill Rate/ESC, kwantyl
-empiryczny, King z korektą σ_err, korekta fill rate dostawcy (LT_eff), profile
-dostawców Turcja/Chiny/Europa, klasyfikacja ABC/XYZ.
+King's Formula, DDMRP, Croston/SBA (intermittent demand), Fill Rate/ESC,
+empirical quantile, King with σ_err correction, supplier fill-rate correction
+(effective lead time), supplier profiles for Turkey/China/Europe, ABC/XYZ
+classification.
 
-## Licencja
+## License
 
-MIT — patrz [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-## Kontakt
+## Contact
 
-Pytania i propozycje współpracy: [ojekjojek@gmail.com](mailto:ojekjojek@gmail.com)
+Questions and collaboration proposals: [ojekjojek@gmail.com](mailto:ojekjojek@gmail.com)
