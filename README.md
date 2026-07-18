@@ -1,8 +1,6 @@
 # Zapas Bezpieczeństwa 2.0 — audyt i budowa kalkulatorów Excel
-### Szkic ulepszonego README.md dla repozytorium `b-safety-stock-skill-inventrooy`
-*(rekomendacja: zmień nazwę repo na `safety-stock-toolkit` lub `zb-skill-inventory` — obecna nazwa ma literówkę "inventrooy")*
 
-![License](https://img.shields.io/github/license/ojekjojek-creator/b-safety-stock-skill-inventrooy)
+![License](https://img.shields.io/github/license/ojekjojek-creator/safety-stock-toolkit)
 ![Claude Skill](https://img.shields.io/badge/Claude-Skill-D97757?logo=anthropic&logoColor=white)
 ![Domain](https://img.shields.io/badge/Domain-Supply%20Chain-blue)
 
